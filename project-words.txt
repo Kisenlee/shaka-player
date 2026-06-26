@@ -372,6 +372,7 @@ pasp
 payl
 piff
 playout
+pnsty
 pocs
 podduration
 postroll
@@ -428,6 +429,7 @@ tenc
 tcmp
 tcom
 tcop
+texttag
 tfdt
 tfhd
 tfrf
