@@ -112,6 +112,10 @@ shaka.test.FakeMediaSourceEngine = class {
         .and.callFake((type, time) => this.bufferedAheadOfImpl(type, time));
 
     /** @type {!jasmine.Spy} */
+    this.bufferedBehindOf = jasmine.createSpy('bufferedBehindOf')
+        .and.callFake((type, time) => this.bufferedBehindOfImpl(type, time));
+
+    /** @type {!jasmine.Spy} */
     this.setStreamProperties = jasmine.createSpy('setStreamProperties')
         .and.callFake((type, offset, end, sequenceMode) =>
           this.setStreamPropertiesImpl_(type, offset, end, sequenceMode));
@@ -257,9 +261,46 @@ shaka.test.FakeMediaSourceEngine = class {
 
   /**
    * @param {string} type
+   * @param {number} end
+   * @return {number}
+   */
+  bufferedBehindOfImpl(type, end) {
+    if (!this.segments[type]) {
+      throw new Error('unexpected type');
+    }
+
+    const ContentType = shaka.util.ManifestParserUtils.ContentType;
+    const hasSegment = (i) => {
+      return i >= 0 && (this.segments[type][i] ||
+          (type == ContentType.VIDEO && this.segments['trickvideo'] &&
+           this.segments['trickvideo'][i]));
+    };
+
+    // Find the last segment fully or partially before |end|.  If |end| sits
+    // exactly on a segment boundary, the segment starting at |end| is not
+    // behind us, so step back one.
+    let last = this.toIndex_(type, end);
+    if (this.toTime_(type, last) >= end) {
+      last--;
+    }
+    if (!hasSegment(last)) {
+      return 0;
+    }  // Unbuffered.
+
+    // Walk backwards to the first gap.
+    let first = last;
+    while (hasSegment(first - 1)) {
+      first--;
+    }
+
+    return end - this.toTime_(type, first);
+  }
+
+  /**
+   * @param {string} type
    * @param {!ArrayBuffer} data
    * @param {?shaka.media.SegmentReference} reference
-   * @return {!Promise}
+   * @return {!Promise<!shaka.media.MediaSourceEngine.AppendBufferInfo>}
    */
   appendBufferImpl(type, data, reference) {
     if (!this.segments[type]) {
@@ -289,7 +330,9 @@ shaka.test.FakeMediaSourceEngine = class {
       this.initSegments[type] =
           this.segmentData[type].initSegments.map((c) => false);
       this.initSegments[type][i] = true;
-      return Promise.resolve();
+      return Promise.resolve({
+        mediaTimestamp: null,
+      });
     }
 
     // Set media segment.
@@ -323,7 +366,9 @@ shaka.test.FakeMediaSourceEngine = class {
     }
 
     this.segments[type][i] = true;
-    return Promise.resolve();
+    return Promise.resolve({
+      mediaTimestamp: segmentData.segmentStartTimes[i],
+    });
   }
 
   /**

@@ -186,6 +186,7 @@ For details on the HLS format and these tags' meanings, see https://datatracker.
 - `#EXT-X-DISCONTINUITY-SEQUENCE=<n>`
 - `#EXT-X-BYTERANGE=<n>[@<o>]`
 - `#EXT-X-MAP:<attribute-list>`
+- `#EXT-X-I-FRAMES-ONLY` I-frame only playlists (clipped MP4 fragments are repaired)
 - `#EXT-X-KEY:<attribute-list>` (`KEYFORMAT="identity",METHOD=SAMPLE-AES` is only supports with MP4 segments)
 - `#EXT-X-PROGRAM-DATE-TIME:<attribute-list>`
 - `#EXT-X-START:TIME-OFFSET=<n>`
@@ -397,6 +398,8 @@ VR modes supported:
 - Equirectangular projection with 360 degrees of horizontal field of view.
 - Half equirectangular projection with 180 degrees of horizontal field of view.
 - Cubemap projection with 360 degrees of horizontal field of view.
+- Fisheye projection, used for regular fisheye content, parametric immersive
+  (`prim`) content, and Apple Immersive Video (`aiv`).
 
 NOTES:
   - VR is only supported for clear streams or HLS-AES stream. DRM prevents
@@ -417,7 +420,6 @@ Shaka currently provides the following versions:
 
  * [Demo](https://shaka-project.github.io/shaka-player-release/)([sources](demo/))
  * [Nightly Demo](https://shaka-project.github.io/shaka-player/)
- * [Demo index](https://index-dot-shaka-player-demo.appspot.com)
  * [API documentation](https://shaka-project.github.io/shaka-player/docs/api/index.html)
  * [Tutorials](https://shaka-project.github.io/shaka-player/docs/api/tutorial-welcome.html)
  * [Hosted builds on Google Hosted Libraries](https://developers.google.com/speed/libraries/#shaka-player)

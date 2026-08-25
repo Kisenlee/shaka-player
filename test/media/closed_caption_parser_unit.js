@@ -59,7 +59,7 @@ describe('ClosedCaptionParser', () => {
   /**
    * @suppress {visibility}
    * @param {shaka.media.ClosedCaptionParser} parser
-   * @return {Map<number, shaka.extern.ICaptionDecoder>}
+   * @return {!Map<number, !shaka.extern.ICaptionDecoder>}
    */
   function getDecoderCache(parser) {
     return parser.decoderCache_;

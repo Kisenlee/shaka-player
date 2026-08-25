@@ -978,12 +978,13 @@ shaka.extern.HLSMetadata;
  *   timescale: number,
  *   eventNode: ?shaka.extern.xml.Node,
  *   urlParams: (?function():string|undefined),
+ *   values: (!Array<shaka.extern.MetadataFrame>|undefined),
  * }}
  *
  * @description
  * Contains information about a region of the timeline that will cause an event
  * to be raised when the playhead enters or exits it.  In DASH this is the
- * EventStream element.
+ * EventStream element.  In HLS this is the EXT-X-DATERANGE tag.
  *
  * @property {string} schemeIdUri
  *   Identifies the message scheme.
@@ -1002,6 +1003,10 @@ shaka.extern.HLSMetadata;
  * @property {(?function():string|undefined)} urlParams
  *   Optional URL parameters function derived from a RequestParam element
  *   (urn:mpeg:dash:urlparam:2025 scheme) present in the EventStream.
+ * @property {(!Array<shaka.extern.MetadataFrame>|undefined)} values
+ *   For HLS EXT-X-DATERANGE tags, contains all the attributes of the tag
+ *   (including ID and any custom attributes), so they can be correlated
+ *   together in a single event.
  * @exportDoc
  */
 shaka.extern.TimelineRegionInfo;
@@ -2387,7 +2392,8 @@ shaka.extern.NetworkingConfiguration;
  *   dispatchAllEmsgBoxes: boolean,
  *   useSourceElements: boolean,
  *   durationReductionEmitsUpdateEnd: boolean,
- *   transmuxWorkerUrl: string
+ *   transmuxWorkerUrl: string,
+ *   repairIFrames: boolean,
  * }}
  *
  * @description
@@ -2468,6 +2474,13 @@ shaka.extern.NetworkingConfiguration;
  *   worker fails to load or the device does not support Workers.
  *   <br>
  *   Defaults to <code>''</code> (worker disabled).
+ * @property {boolean} repairIFrames
+ *   Some I-frame only stream clip the media segment byte range without
+ *   rewriting the moof/mdat, leaving the fragment declaring more samples than
+ *   it actually contains.  Repair those before appending.
+ *   Note: this is allowed by HLS spec.
+ *   <br>
+ *   Defaults to <code>true</code>.
  * @exportDoc
  */
 shaka.extern.MediaSourceConfiguration;
@@ -2512,6 +2525,8 @@ shaka.extern.AccessibilityConfiguration;
  *   disableTrackingEvents: boolean,
  *   disableSnapback: boolean,
  *   interstitialPreloadAheadTime: number,
+ *   disablePlayedLinearAdSkip: boolean,
+ *   disableTrackingForPlayedLinearAds: boolean,
  * }}
  *
  * @description
@@ -2571,6 +2586,20 @@ shaka.extern.AccessibilityConfiguration;
  *   Interstitial preload ahead time, in seconds.
  *   <br>
  *   Defaults to <code>10</code>.
+ * @property {boolean} disablePlayedLinearAdSkip
+ *   If true, disables automatic skipping of already-played linear ads.
+ *   Normally, played linear ads are force-skipped on replay. When this flag
+ *   is set, they will play through, allowing the app to control skip behavior.
+ *   Only applies to MediaTailor streams.
+ *   <br>
+ *   Defaults to <code>false</code>.
+ * @property {boolean} disableTrackingForPlayedLinearAds
+ *   If true, suppresses tracking beacons when a previously-played linear ad
+ *   replays. Only meaningful when
+ *   <code>disablePlayedLinearAdSkip</code> is also true. Only applies to
+ *   MediaTailor streams.
+ *   <br>
+ *   Defaults to <code>false</code>.
  *
  * @exportDoc
  */
@@ -2688,9 +2717,6 @@ shaka.extern.AdsConfiguration;
  *   trust the information provided by the browser.
  *   <br>
  *   Defaults to <code>false</code>.
- * @property {shaka.extern.DroppedFrameProtectionConfig} droppedFrameProtection
- *   Configuration for monitoring dropped frames and temporarily disabling
- *   streams that exceed a threshold.
  * @property {boolean} droppedFrames
  *   Enable or disable dropped frames protection.
  *   <br>
@@ -2767,11 +2793,14 @@ shaka.extern.AdvancedAbrConfiguration;
  *   url: string,
  *   includeKeys: !Array<string>,
  *   events: !Array<string>,
- *   timeInterval: number,
+ *   interval: (number|undefined),
+ *   batchSize: (number|undefined),
+ *   version: (number|undefined)
  * }}
  *
  * @description
- *  Common Media Client Data (CMCD) Target Configuration
+ *  Common Media Client Data (CMCD) Target Configuration. Experimental
+ *  v2 surface — field names are subject to change.
  *
  * @property {string} mode
  * Specifies the transmission strategy for the CMCD data.
@@ -2799,14 +2828,23 @@ shaka.extern.AdvancedAbrConfiguration;
  * <br>
  * Defaults to <code>[]</code>.
  * @property {!Array<string>} events
- * An array of events to include as part of ps and sta in the CMCD data.
- * If not provided, all events will be included.
+ * An array of events that this target subscribes to.
+ * If not provided, no event reports will be sent to this target.
  * <br>
  * Defaults to <code>[]</code>.
- * @property {number} timeInterval
- *   Time Interval config in seconds
+ * @property {(number|undefined)} interval
+ *   Time-interval period in seconds for periodic event reports
+ *   (<code>'t'</code> events). Set to <code>0</code> to disable periodic
+ *   reports.
  *   <br>
- *   Defaults to <code>10</code>.
+ *   Defaults to <code>30</code> (the CMCD v2 default).
+ * @property {(number|undefined)} batchSize
+ *   Number of events to batch before dispatch.
+ *   <br>
+ *   Defaults to <code>1</code> (no batching).
+ * @property {(number|undefined)} version
+ *   Per-target CMCD version override. CMCD event mode is v2-only;
+ *   leave unset to inherit the top-level <code>version</code>.
  * @exportDoc
  */
 shaka.extern.CmcdTarget;
@@ -2820,7 +2858,7 @@ shaka.extern.CmcdTarget;
  *   rtpSafetyFactor: number,
  *   includeKeys: !Array<string>,
  *   version: number,
- *   targets: ?Array<shaka.extern.CmcdTarget>
+ *   eventTargets: ?Array<shaka.extern.CmcdTarget>
  * }}
  *
  * @description
@@ -2868,8 +2906,11 @@ shaka.extern.CmcdTarget;
  *   and CMCD v2 specifications, respectively.
  *   <br>
  *   Defaults to <code>1</code>.
- * @property {Array<shaka.extern.CmcdTarget>=} targets
- *   The event/response mode targets.
+ * @property {Array<shaka.extern.CmcdTarget>=} eventTargets
+ *   Experimental v2: event-mode reporting targets. Each entry configures
+ *   one endpoint that receives batched CMCD event reports
+ *   (e.g., <code>'ps'</code>, <code>'rr'</code>) for the configured
+ *   <code>events</code>.
  *   <br>
  * @exportDoc
  */
@@ -3002,7 +3043,6 @@ shaka.extern.OfflineConfiguration;
 
 /**
  * @typedef {{
- *   captionsUpdatePeriod: number,
  *   fontScaleFactor: number,
  *   positionArea: shaka.config.PositionArea,
  *   subtitleDelay: number,
@@ -3012,10 +3052,6 @@ shaka.extern.OfflineConfiguration;
  * @description
  *   Text displayer configuration.
  *
- * @property {number} captionsUpdatePeriod
- *   The number of seconds to see if the captions should be updated.
- *   <br>
- *   Defaults to <code>0.25</code>.
  * @property {number} fontScaleFactor
  *   The font scale factor used to increase or decrease the font size.
  *   <br>
@@ -3122,6 +3158,7 @@ shaka.extern.TextPreference;
  * @typedef {{
  *   label: string,
  *   role: string,
+ *   language: string,
  *   codec: string,
  *   hdrLevel: string,
  *   layout: string
@@ -3133,6 +3170,13 @@ shaka.extern.TextPreference;
  *   Defaults to <code>''</code>.
  * @property {string} role
  *   The preferred role for video tracks.
+ *   <br>
+ *   Defaults to <code>''</code>.
+ * @property {string} language
+ *   The preferred language for video tracks, e.g. <code>'sgn-US'</code> for
+ *   American Sign Language. Used to disambiguate video tracks that share the
+ *   same role but differ in language (for example, multiple sign-language
+ *   video tracks). An IETF language tag like 'en', 'en-US', 'sgn-NL', etc.
  *   <br>
  *   Defaults to <code>''</code>.
  * @property {string} codec
