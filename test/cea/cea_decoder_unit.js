@@ -226,7 +226,7 @@ describe('CeaDecoder', () => {
       expect(captions).toEqual(expectedCaptions);
     });
 
-    // Locks the PAC styling semantics (Requirement 3.4): a PAC sets the row
+    // Locks the PAC styling semantics: a PAC sets the row
     // and the base style (color/italics/underline) AND resets the background
     // color to default. A yellow background is set first, then a PAC arrives;
     // the subsequently written characters must render with the PAC's base style
@@ -274,7 +274,7 @@ describe('CeaDecoder', () => {
       expect(captions).toEqual(expectedCaptions);
     });
 
-    // Locks the mid-row styling semantics (Requirement 3.5): a mid-row code
+    // Locks the mid-row styling semantics: a mid-row code
     // inserts a single spacing character and changes foreground color, italics,
     // and underline from that point onward, WITHOUT resetting the background.
     // Here a yellow background is set, "ab" is written, then a red + underline
@@ -660,7 +660,7 @@ describe('CeaDecoder', () => {
       // captioning channel (CC1).
       expect(captions[0].stream).toBe('T1');
       // getStreams() reports the text-mode stream once text-mode cues are
-      // produced (Req 2.7).
+      // produced.
       expect(decoder.getStreams()).toContain('T1');
     });
 
@@ -797,7 +797,7 @@ describe('CeaDecoder', () => {
       }
     }
 
-    // Req 1.5: the decoder must strip the odd-parity bit before interpreting
+    // the decoder must strip the odd-parity bit before interpreting
     // bytes. The helper sets parity bits on every byte; correct text proves
     // the bit is removed (otherwise 0xf4 etc. would map to other glyphs).
     it('strips the parity bit before interpreting byte pairs', () => {
@@ -808,7 +808,7 @@ describe('CeaDecoder', () => {
       expect(text).toBe('test');
     });
 
-    // Req 1.1: a pair where either byte has even parity yields no cue.
+    // a pair where either byte has even parity yields no cue.
     const evenParityCases = [
       {name: 'both bytes have even parity', b1: 0x00, b2: 0x00},
       {name: 'only the first byte has even parity',
@@ -827,7 +827,7 @@ describe('CeaDecoder', () => {
       });
     }
 
-    // Req 1.1: an even-parity pair injected mid-caption is ignored entirely
+    // an even-parity pair injected mid-caption is ignored entirely
     // (it neither emits a cue nor corrupts the surrounding buffer).
     it('ignores an even-parity pair inserted mid-caption', () => {
       const baseline = decodePopon([]);
@@ -837,7 +837,7 @@ describe('CeaDecoder', () => {
       expect(withBadFrame).toEqual(baseline);
     });
 
-    // Req 1.2: the reset boundary is exactly 45 consecutive bad frames.
+    // the reset boundary is exactly 45 consecutive bad frames.
     it('does not reset before 45 consecutive bad frames', () => {
       extractBadFrames(/* count= */ 44, /* startPts= */ 1);
       spyOn(decoder, 'reset').and.callThrough();
@@ -852,7 +852,7 @@ describe('CeaDecoder', () => {
       expect(decoder.reset).toHaveBeenCalledTimes(1);
     });
 
-    // Req 1.1/1.2: a valid frame clears the bad-frame counter, so bad frames
+    // a valid frame clears the bad-frame counter, so bad frames
     // on either side of it never sum past the reset threshold.
     it('clears the bad-frame counter after a valid frame', () => {
       extractBadFrames(/* count= */ 44, /* startPts= */ 1);
@@ -865,7 +865,7 @@ describe('CeaDecoder', () => {
       expect(decoder.reset).not.toHaveBeenCalled();
     });
 
-    // Req 1.3: XDS control codes (b1 in [0x01, 0x0F]) are ignored and leave
+    // XDS control codes (b1 in [0x01, 0x0F]) are ignored and leave
     // the displayed/non-displayed buffers unchanged.
     it('ignores XDS control codes without altering caption buffers', () => {
       const baseline = decodePopon([]);
@@ -877,7 +877,7 @@ describe('CeaDecoder', () => {
       expect(withXds).toEqual(baseline);
     });
 
-    // Req 1.3: a stream made up solely of XDS pairs emits nothing.
+    // a stream made up solely of XDS pairs emits nothing.
     it('emits no cue for a stream of only XDS control codes', () => {
       const sei = CeaUtils.buildCea608Sei([
         pair(0x01, 0x20),
@@ -891,11 +891,6 @@ describe('CeaDecoder', () => {
   });
 
   describe('CEA-608 stream robustness (seeded-random properties)', () => {
-    // These tests realize design.md Property 1 (parity rejection) and
-    // Property 3 (XDS isolation) as seeded-random Jasmine tests. The project
-    // ships zero new runtime deps and is conservative about dev deps, so we
-    // use a deterministic PRNG inline instead of a property-testing library;
-    // every run is reproducible from its seed.
 
     // Raw CEA-608 control bytes (parity applied by the test helper).
     const RCL = {b1: 0x14, b2: 0x20}; // Resume Caption Loading (pop-on).
@@ -954,7 +949,7 @@ describe('CeaDecoder', () => {
 
     /**
      * Builds a field-1 pair descriptor whose first byte has even parity, so the
-     * pair is guaranteed to be rejected as a bad frame (Req 1.1). Bytes are
+     * pair is guaranteed to be rejected as a bad frame (). Bytes are
      * pre-parity, so applyParity is false.
      * @param {function(): number} rng
      * @return {{field: number, b1: number, b2: number, applyParity: boolean}}
@@ -994,11 +989,10 @@ describe('CeaDecoder', () => {
       return {field: 1, b1, b2, applyParity: true};
     }
 
-    // Property 1: any byte pair where a byte has even parity yields no cue and
+    // any byte pair where a byte has even parity yields no cue and
     // increments the bad-frame counter. We prove the increment behaviorally:
     // K bad frames followed by (45 - K) more bad frames must trigger exactly
     // one reset, which only happens once the counter reaches 45.
-    // **Validates: Requirements 1.1**
     for (const seed of SEEDS) {
       it(`rejects even-parity pairs and counts them (seed ${seed})`, () => {
         const rng = makeRng(seed);
@@ -1029,10 +1023,9 @@ describe('CeaDecoder', () => {
       });
     }
 
-    // Property 3: injecting XDS control codes (b1 in [0x01, 0x0F]) into a
+    // injecting XDS control codes (b1 in [0x01, 0x0F]) into a
     // caption stream leaves the decoded output identical to the same stream
     // with the XDS pairs removed.
-    // **Validates: Requirements 1.3**
     for (const seed of SEEDS) {
       it(`isolates injected XDS pairs from caption output (seed ${seed})`,
           () => {
@@ -1100,7 +1093,7 @@ describe('CeaDecoder', () => {
 
   describe('CEA-608 duplicate control-code suppression', () => {
     // FCC practice transmits control codes twice; an identical control pair in
-    // the immediately following frame must be applied exactly once (Req 1.4).
+    // the immediately following frame must be applied exactly once.
     // BackSpace (BS) is used as the probe because its effect -- erasing one
     // displayed character -- is directly observable in the emitted cue text.
 
@@ -1156,7 +1149,7 @@ describe('CeaDecoder', () => {
       expect(decodePoponText([pair(BS.b1, BS.b2)])).toBe('tes');
     });
 
-    // Req 1.4: an identical control pair in two immediately consecutive frames
+    // an identical control pair in two immediately consecutive frames
     // is applied exactly once, so only one character is erased ("test" ->
     // "tes"), matching the single-BS baseline rather than erasing two.
     it('applies a duplicated control pair in consecutive frames once', () => {
@@ -1190,7 +1183,6 @@ describe('CeaDecoder', () => {
   });
 
   describe('CEA-608 text mode', () => {
-    // Example tests for CEA-608 Text Mode (design.md gap 608-1, Req 2.1-2.4,
     // 2.7). Text mode is entered via RTD or TR; typed characters accumulate in
     // a dedicated text buffer and are emitted (like roll-up) on Carriage
     // Return, surfaced on the text-channel streams (T1-T4). Raw control bytes
@@ -1229,7 +1221,7 @@ describe('CeaDecoder', () => {
       return caption.cue.nestedCues.map((c) => c.payload).join('');
     }
 
-    // Req 2.1/2.2/2.7: entering text mode via RTD, typing, then a CR emits a
+    // entering text mode via RTD, typing, then a CR emits a
     // single cue on the matching text-mode stream (CC1 -> T1), and the stream
     // is discoverable via getStreams().
     it('enters text mode via RTD and emits a cue on T1 at CR', () => {
@@ -1251,7 +1243,7 @@ describe('CeaDecoder', () => {
       expect(decoder.getStreams()).toContain('T1');
     });
 
-    // Req 2.2/2.3: entering text mode via TR behaves the same as RTD for a
+    // entering text mode via TR behaves the same as RTD for a
     // fresh buffer -- typing then CR emits the text on T1.
     it('enters text mode via TR and emits a cue on T1 at CR', () => {
       decoder.extract(CeaUtils.buildCea608Sei([
@@ -1269,7 +1261,7 @@ describe('CeaDecoder', () => {
       expect(decoder.getStreams()).toContain('T1');
     });
 
-    // Req 2.7: the text-channel number tracks the field/channel of the control
+    // the text-channel number tracks the field/channel of the control
     // code. b1 = 0x1c selects channel 2 (CC2), so its text mode emits on T2.
     it('surfaces a channel-2 text-mode caption on T2', () => {
       decoder.extract(CeaUtils.buildCea608Sei([
@@ -1287,7 +1279,7 @@ describe('CeaDecoder', () => {
       expect(decoder.getStreams()).toContain('T2');
     });
 
-    // Req 2.7: field 2 (cc_type 1) with b1 = 0x15 selects CC3, so its text mode
+    // field 2 (cc_type 1) with b1 = 0x15 selects CC3, so its text mode
     // emits on T3.
     it('surfaces a field-2 text-mode caption on T3', () => {
       decoder.extract(CeaUtils.buildCea608Sei([
@@ -1305,7 +1297,7 @@ describe('CeaDecoder', () => {
       expect(decoder.getStreams()).toContain('T3');
     });
 
-    // Req 2.3: a Text Restart clears the text buffer. Text typed before the TR
+    // a Text Restart clears the text buffer. Text typed before the TR
     // ("AB") must not appear in the cue emitted after it; only the text typed
     // afterward ("CD") survives.
     it('clears the text buffer on TR', () => {
@@ -1327,7 +1319,7 @@ describe('CeaDecoder', () => {
       expect(textOf(captions[0])).toBe('CD');
     });
 
-    // Req 2.4: Erase Displayed Memory does NOT clear the text buffer while text
+    // Erase Displayed Memory does NOT clear the text buffer while text
     // mode is active. The text typed before EDM survives and is emitted by the
     // subsequent CR.
     it('does not clear the text buffer on EDM while in text mode', () => {
@@ -1347,7 +1339,7 @@ describe('CeaDecoder', () => {
       expect(textOf(captions[0])).toBe('test');
     });
 
-    // Req 2.1: pop-on captioning is unaffected by the text-mode changes -- it
+    // pop-on captioning is unaffected by the text-mode changes -- it
     // still emits on the captioning stream (CC1), never a text stream.
     it('leaves pop-on captioning emitting on CC1', () => {
       decoder.extract(CeaUtils.buildCea608Sei([
@@ -1365,7 +1357,7 @@ describe('CeaDecoder', () => {
       expect(textOf(captions[0])).toBe('test');
     });
 
-    // Req 2.1: roll-up captioning is unaffected by the text-mode changes -- it
+    // roll-up captioning is unaffected by the text-mode changes -- it
     // still emits on the captioning stream (CC1), never a text stream.
     it('leaves roll-up captioning emitting on CC1', () => {
       decoder.extract(CeaUtils.buildCea608Sei([
@@ -1384,16 +1376,8 @@ describe('CeaDecoder', () => {
   });
 
   describe('CEA-608 text mode (seeded-random properties)', () => {
-    // This realizes design.md Property 5 (text-mode liveness) as a
-    // seeded-random Jasmine test. The project ships zero new runtime deps and
-    // is conservative about dev deps, so we use a deterministic PRNG inline
-    // instead of a property-testing library; every run is reproducible from
-    // its seed.
-    //
-    // Property 5: for all inputs that enter text mode (via RTD or TR) and then
-    // issue a Carriage Return after typing non-empty text, decode() emits at
-    // least one cue on a text-mode stream (T1-T4).
-    // **Validates: Requirements 2.2**
+    // After entering text mode and issuing CR with non-empty text, decode()
+    // emits at least one cue on a text-mode stream (T1-T4).
 
     // Raw CEA-608 control bytes (parity applied by the test helper).
     const RTD = {b1: 0x14, b2: 0x2b}; // Resume Text Display (enter text mode).
@@ -1483,23 +1467,8 @@ describe('CeaDecoder', () => {
   });
 
   describe('CEA-608 mode exclusivity (seeded-random properties)', () => {
-    // This realizes design.md Property 4 (mode exclusivity) as a seeded-random
-    // Jasmine test. The project ships zero new runtime deps and is conservative
-    // about dev deps, so we use a deterministic PRNG inline instead of a
-    // property-testing library; every run is reproducible from its seed.
-    //
-    // Property 4: at every point in any decode, exactly one CaptionType is
-    // active and curBuf_ points to the buffer that mode mandates (POPON ->
-    // non-displayed, PAINTON/ROLLUP -> displayed, TEXT -> text).
-    //
-    // type_ and curBuf_ are private, so the invariant is asserted through its
-    // OBSERVABLE consequence: after a random walk through the mode-switch
-    // control codes, characters typed under the final mode are routed to
-    // exactly the buffer that mode mandates and emerge on exactly the expected
-    // stream -- a caption stream (CC{n}) for the three caption modes, a text
-    // stream (T{n}) for text mode. Exactly one cue is produced, proving a
-    // single active buffer received the characters.
-    // **Validates: Requirements 2.1**
+    // After a random walk through mode-switch controls, typed characters emerge
+    // on exactly the stream that mode mandates (CC{n} or T{n}).
 
     // Mode-switch control codes (field 1, channel 1). Each selects one of the
     // four CEA-608 display modes and points curBuf_ at that mode's buffer.
@@ -1658,7 +1627,7 @@ describe('CeaDecoder', () => {
   });
 
   describe('CEA-608 display modes', () => {
-    // Example tests locking the CEA-608 display-mode semantics (Req 2.1, 2.5,
+    // Example tests locking the CEA-608 display-mode semantics.
     // 2.6): the pop-on End Of Caption (EOC) memory flip, roll-up window sizing
     // (RU2/RU3/RU4) plus the pre-emit of any displayed non-roll-up content
     // before switching modes, and paint-on (RDC) mode exclusivity. Raw control
@@ -1713,7 +1682,7 @@ describe('CeaDecoder', () => {
       return caption.cue.nestedCues.filter((c) => c.lineBreak).length;
     }
 
-    // Req 2.5: End Of Caption emits the currently displayed memory AND swaps
+    // End Of Caption emits the currently displayed memory AND swaps
     // displayed/non-displayed memory. Two successive pop-on captions prove the
     // flip: the first EOC loads "AB" into the display (emitting nothing yet),
     // the second EOC emits that displayed "AB" and swaps in the freshly loaded
@@ -1750,7 +1719,7 @@ describe('CeaDecoder', () => {
       expect(captions[1].cue.endTime).toBe(3);
     });
 
-    // Req 2.1/2.5: pop-on writes go to the non-displayed buffer, which is not
+    // pop-on writes go to the non-displayed buffer, which is not
     // shown until an EOC flips it in. Without an EOC, an EDM finds the
     // displayed memory empty and emits nothing.
     it('does not display loaded pop-on memory until an EOC flips it in', () => {
@@ -1792,7 +1761,7 @@ describe('CeaDecoder', () => {
       return decoder.decode();
     }
 
-    // Req 2.6: a Roll-Up command sets the scroll window to the requested size.
+    // a Roll-Up command sets the scroll window to the requested size.
     // Rolling up more lines than the window holds saturates it, so the final
     // emitted caption shows exactly `size` rows (size - 1 line breaks). Testing
     // all three sizes proves RU2/RU3/RU4 are honored distinctly.
@@ -1808,7 +1777,7 @@ describe('CeaDecoder', () => {
       });
     }
 
-    // Req 2.6: a Roll-Up command must emit any displayed non-roll-up content
+    // a Roll-Up command must emit any displayed non-roll-up content
     // before switching modes. A pop-on "test" is flipped into the display, then
     // an RU2 arrives: the displayed "test" is emitted as the mode switches.
     it('emits displayed non-roll-up content before switching to roll-up',
@@ -1831,7 +1800,7 @@ describe('CeaDecoder', () => {
           expect(captions[0].cue.endTime).toBe(2);
         });
 
-    // Req 2.1: paint-on (RDC) directs character writes to the displayed buffer,
+    // paint-on (RDC) directs character writes to the displayed buffer,
     // and only one mode is active at a time. Pop-on first loads "AB" into the
     // non-displayed buffer; RDC then makes the displayed buffer active, so "CD"
     // is written there. A trailing EDM emits only the paint-on "CD" -- the
@@ -1943,7 +1912,6 @@ describe('CeaDecoder', () => {
 
     it('recovers from a malformed block without corrupting built windows',
         () => {
-          // Requirement 6.3 / Error Handling Scenario 1 (DTVCC buffer
           // over-read): a malformed service block that declares more bytes than
           // are present makes DtvccPacket.readByte run off the end of the
           // packet, raising a typed shaka.util.Error with Code
@@ -2014,26 +1982,8 @@ describe('CeaDecoder', () => {
   });
 
   describe('CEA-708 DTVCC block alignment (seeded-random properties)', () => {
-    // Realizes design.md Property 7 (DTVCC block alignment) as a seeded-random
-    // Jasmine test. Per CTA-708-E, the C1 Delay command (DLY, 0x8d) is two
-    // bytes: the command byte plus a one-byte operand; DelayCancel (DLC, 0x8e)
-    // is a single byte with no operand. handleC1_ must consume exactly those
-    // lengths so the service-block byte counter never under- or over-reads.
-    //
-    // We prove alignment observationally: a service block with Delay /
-    // DelayCancel commands interleaved among G0 text characters must decode to
-    // exactly the same rendered text as the identical block with the delay
-    // commands removed. If the Delay operand byte were mis-counted, every
-    // subsequent byte in the block would shift by one -- the operand would be
-    // re-interpreted as a command or rendered as a stray character, and the
-    // text would diverge. To make that failure mode unmissable, delay operands
-    // are drawn from values that include printable G0 codes (e.g. 0x41 = 'A'),
-    // so a leaked operand would visibly corrupt the output.
-    //
-    // The project ships zero new runtime deps and is conservative about dev
-    // deps, so we use a deterministic inline PRNG rather than a property
-    // testing library; every run is reproducible from its seed.
-    // **Validates: Requirements 4.1**
+    // Delay (0x8d) consumes one operand byte; DelayCancel (0x8e) has none.
+    // Interleaving them among G0 text must not change the rendered output.
 
     const serviceNumber = 1;
 
@@ -2120,10 +2070,9 @@ describe('CeaDecoder', () => {
           randInt(rng, 0x41, 0x5a) : randInt(rng, 0x00, 0xff);
     }
 
-    // Property 7: interleaving Delay / DelayCancel commands among G0 text never
+    // interleaving Delay / DelayCancel commands among G0 text never
     // changes the rendered text, because each command consumes exactly its
     // spec-defined length and leaves the block aligned.
-    // **Validates: Requirements 4.1**
     for (const seed of SEEDS) {
       it(`keeps the block aligned across random delays (seed ${seed})`, () => {
         const rng = makeRng(seed);
@@ -2210,14 +2159,8 @@ describe('CeaDecoder', () => {
   });
 
   describe('cue output correctness (timing and structure)', () => {
-    // Example tests locking the cue-output invariants (design.md Property 10,
-    // Req 6.1 and 6.2): every emitted cue satisfies startTime < endTime, cues
-    // from a single stream are well-ordered (next.startTime >= prev.endTime),
-    // and every emitted caption is a shaka.text.Cue tree whose nested cues are
-    // the styled text runs and line breaks. The seeded-random property version
-    // of the timing invariant lives in task 11.2; these are concrete examples
-    // covering a CEA-608 roll-up sequence and CEA-708 sequences. Raw CEA-608
-    // control bytes are listed here; the test helper applies odd parity.
+    // Emitted cues must have startTime < endTime, be well-ordered per stream,
+    // and form a Cue tree of styled runs and line breaks.
     const RU2 = {b1: 0x14, b2: 0x25}; // Roll-Up, 2 rows.
     const CR = {b1: 0x14, b2: 0x2d}; // Carriage Return (emit + scroll).
     const AON = {b1: 0x14, b2: 0x23}; // Alarm-On no-op; breaks dup-suppression.
@@ -2250,29 +2193,23 @@ describe('CeaDecoder', () => {
     }
 
     /**
-     * Asserts the timing invariants of Req 6.1 / Property 10 over an emitted
-     * caption list that all belong to a single stream: each cue has
-     * startTime < endTime, and consecutive cues are non-overlapping and
-     * ordered (next.startTime >= prev.endTime).
+     * Asserts timing invariants over an emitted caption list that all belong
+     * to a single stream: each cue has startTime < endTime, and consecutive
+     * cues are non-overlapping and ordered (next.startTime >= prev.endTime).
      * @param {!Array<!shaka.extern.ICaptionDecoder.ClosedCaption>} captions
      */
     function assertWellOrderedTiming(captions) {
       for (let i = 0; i < captions.length; i++) {
         const cue = captions[i].cue;
-        // Req 6.1: a cue must occupy a strictly positive time interval.
         expect(cue.startTime).toBeLessThan(cue.endTime);
         if (i > 0) {
-          // Req 6.1: consecutive cues from the same stream do not overlap.
           expect(cue.startTime)
               .toBeGreaterThanOrEqual(captions[i - 1].cue.endTime);
         }
       }
     }
 
-    // Req 6.1 / Property 10: a CEA-608 roll-up stream emits a cue per Carriage
-    // Return. Four lines, each in its own SEI at a strictly increasing pts,
-    // produce a run of cues that must all share one stream and satisfy the
-    // timing invariants (start < end, and each next start >= the prior end).
+    // A CEA-608 roll-up stream emits a cue per Carriage Return.
     it('emits well-ordered CEA-608 roll-up cues on a single stream', () => {
       const lineCount = 4;
       for (let i = 0; i < lineCount; i++) {
@@ -2297,10 +2234,7 @@ describe('CeaDecoder', () => {
       assertWellOrderedTiming(captions);
     });
 
-    // Req 6.2: a CEA-608 roll-up caption is a shaka.text.Cue tree whose nested
-    // cues are the per-row styled text runs separated by line-break cues. A
-    // saturated 2-row roll-up window emits two text rows with exactly one line
-    // break between them.
+    // A saturated 2-row roll-up window emits two text rows with one line break.
     it('emits a CEA-608 roll-up caption as a nested Cue tree with a line ' +
         'break', () => {
       const lineCount = 4;
@@ -2348,7 +2282,7 @@ describe('CeaDecoder', () => {
       expect(topLevelCue.nestedCues[breakIndex].payload).toBe('');
     });
 
-    // Req 6.2: a styled CEA-608 run is surfaced as a nested cue that carries
+    // A styled CEA-608 run is surfaced as a nested cue that carries
     // the run's style fields (here: green, underlined text). This proves the
     // nested-cue structure expresses styled runs, not just plain text.
     it('expresses a styled CEA-608 run as a styled nested cue', () => {
@@ -2396,7 +2330,7 @@ describe('CeaDecoder', () => {
       assertWellOrderedTiming(captions);
     });
 
-    // Req 6.1 / Property 10: a CEA-708 service emits a cue per Form Feed (which
+    // A CEA-708 service emits a cue per Form Feed (which
     // flushes the visible window and clears it). Three Form Feeds followed by a
     // window hide produce a run of cues on one service stream that must all
     // satisfy the timing invariants.
@@ -2428,7 +2362,7 @@ describe('CeaDecoder', () => {
       assertWellOrderedTiming(captions);
     });
 
-    // Req 6.2: a CEA-708 caption spanning two rows is a shaka.text.Cue tree
+    // A CEA-708 caption spanning two rows is a shaka.text.Cue tree
     // whose nested cues are the per-row text runs separated by a line-break
     // cue. Text is written on row 0, the pen is moved to row 1 via
     // SetPenLocation, more text is written, and a window hide flushes the
@@ -2477,23 +2411,8 @@ describe('CeaDecoder', () => {
   });
 
   describe('monotonic cue timing (seeded-random properties)', () => {
-    // Realizes design.md Property 10 (monotonic cue timing) as a seeded-random
-    // Jasmine test. For all emitted cues from a single stream:
-    //   startTime < endTime, and consecutive cues satisfy
-    //   next.startTime >= prev.endTime.
-    //
-    // Each run interleaves a CEA-608 roll-up stream (CC1) and a CEA-708 service
-    // stream (svc1) so that cues from multiple streams are emitted from the
-    // same decode and may arrive interleaved. The invariant is per-stream, so
-    // emitted cues are grouped by stream before the timing checks run. Every
-    // packet is delivered at a strictly increasing pts (the decoder seeds
-    // prevEndTime_ from the first packet's pts), which is the only requirement
-    // for startTime < endTime to hold.
-    //
-    // The project ships zero new runtime deps and is conservative about dev
-    // deps, so we use a deterministic inline PRNG rather than a property
-    // testing library; every run is reproducible from its seed.
-    // **Validates: Requirements 6.1**
+    // Per stream: startTime < endTime, and consecutive cues satisfy
+    // next.startTime >= prev.endTime.
 
     const RU2 = {b1: 0x14, b2: 0x25}; // Roll-Up, 2 rows.
     const CR = {b1: 0x14, b2: 0x2d}; // Carriage Return (emit + scroll).
@@ -2578,7 +2497,7 @@ describe('CeaDecoder', () => {
     }
 
     /**
-     * Asserts Req 6.1 / Property 10 over a list of cues that all belong to a
+     * Asserts over a list of cues that all belong to a
      * single stream: each cue has startTime < endTime, and consecutive cues
      * satisfy next.startTime >= prev.endTime.
      * @param {!Array<!shaka.extern.ICaptionDecoder.ClosedCaption>} captions
@@ -2586,19 +2505,14 @@ describe('CeaDecoder', () => {
     function assertWellOrderedTiming(captions) {
       for (let i = 0; i < captions.length; i++) {
         const cue = captions[i].cue;
-        // Req 6.1: a cue must occupy a strictly positive time interval.
         expect(cue.startTime).toBeLessThan(cue.endTime);
         if (i > 0) {
-          // Req 6.1: consecutive cues from the same stream do not overlap.
           expect(cue.startTime)
               .toBeGreaterThanOrEqual(captions[i - 1].cue.endTime);
         }
       }
     }
-
-    // Property 10: across a randomized decode that emits cues on more than one
-    // stream, every stream's cues are well-ordered in time.
-    // **Validates: Requirements 6.1**
+    // Across a randomized multi-stream decode, stream, every stream's cues are well-ordered in time.
     for (const seed of SEEDS) {
       it(`emits per-stream well-ordered cues (seed ${seed})`, () => {
         const rng = makeRng(seed);
@@ -2656,7 +2570,7 @@ describe('CeaDecoder', () => {
         expect(byStream.size).toBeGreaterThan(1);
         expect(byStream.has('CC1')).toBe(true);
         expect(byStream.has('svc' + serviceNumber)).toBe(true);
-        // Property 10: the timing invariant holds independently per stream.
+        // the timing invariant holds independently per stream.
         for (const streamCaptions of byStream.values()) {
           expect(streamCaptions.length).toBeGreaterThan(0);
           assertWellOrderedTiming(streamCaptions);

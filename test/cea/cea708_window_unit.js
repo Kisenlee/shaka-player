@@ -418,7 +418,7 @@ describe('Cea708Window', () => {
 
 
   describe('pen-bounds safety', () => {
-    // Req 5.2: setCharacter writes a character only when the pen is within the
+    // setCharacter writes a character only when the pen is within the
     // window's row and column counts; otherwise the window memory remains
     // unchanged (and nothing is emitted). The window is defined with rowCount
     // rows and colCount columns in beforeEach, so valid pen indices are
@@ -493,14 +493,8 @@ describe('Cea708Window', () => {
       expect(caption).toEqual({stream, cue: topLevelCue});
     });
 
-    // Property 9: Pen-bounds safety (design.md). For random pen locations
-    // (including out-of-bounds) and characters, setCharacter writes only when
-    // the pen is within rowCount/colCount; an out-of-bounds write leaves the
-    // window memory unchanged. This is realized as a seeded-random Jasmine test
-    // (the project enforces zero new runtime deps, so no fast-check). A
-    // deterministic inline mulberry32 PRNG, seeded from a spread of fixed
-    // seeds, generates the (row, col, char) operation sequences.
-    // **Validates: Requirements 5.2**
+    // setCharacter writes only when the pen is within rowCount/colCount;
+    // an out-of-bounds write leaves the window memory unchanged.
 
     /**
      * A small, deterministic PRNG (mulberry32). Given the same seed it always

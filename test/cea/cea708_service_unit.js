@@ -1180,14 +1180,8 @@ describe('Cea708Service', () => {
       expect(captions[0].cue.textAlign).toBe(shaka.text.Cue.textAlign.CENTER);
     });
 
-    // Property 12: Predefined-style determinism (design.md). For a given
-    // (WNSTY, PNSTY) preset pair, the resulting window/pen style is a pure
-    // function of those preset ids (prior style is used only when an id is 0
-    // and the window already existed). This is realized as a seeded-random
-    // Jasmine test (the project enforces zero new runtime deps, so no
-    // fast-check). A deterministic inline mulberry32 PRNG, seeded from a spread
-    // of fixed seeds, generates the (windowStyle, penStyle) pairs.
-    // **Validates: Requirements 4.2**
+    // For a given (WNSTY, PNSTY) pair, the resulting style is a pure function
+    // of those preset ids (prior style is used only when an id is 0).
 
     /**
      * A small, deterministic PRNG (mulberry32). Given the same seed it always
@@ -1314,7 +1308,7 @@ describe('Cea708Service', () => {
     });
 
     it('uses prior style only for id 0 on an existing window', () => {
-      // Property 12 prior-style clause: a preset id of 0 keeps the existing
+      // a preset id of 0 keeps the existing
       // style, but only when the window already existed. Re-defining the same
       // window with (WNSTY=0, PNSTY=0) must leave the previously applied preset
       // state untouched.
@@ -1352,13 +1346,12 @@ describe('Cea708Service', () => {
   });
 
   describe('reserved C2/C3 codes and unmapped G2/G3 chars', () => {
-    // Req 4.4: a C2 or C3 reserved control code skips the spec-mandated number
+    // a C2 or C3 reserved control code skips the spec-mandated number
     // of operand bytes without altering window state. Per CTA-708-E, the C2
     // set skips 0/1/2/3 operand bytes for code ranges 0x00-0x07 / 0x08-0x0f /
     // 0x10-0x17 / 0x18-0x1f, and the C3 set skips 4/5 operand bytes for ranges
     // 0x80-0x87 / 0x88-0x8f.
-    //
-    // Req 4.5: a G2 or G3 character with no mapping renders the spec-mandated
+    // a G2 or G3 character with no mapping renders the spec-mandated
     // underline ('_') placeholder; mapped characters render their glyph.
 
     /**
@@ -1367,7 +1360,7 @@ describe('Cea708Service', () => {
      * The operand bytes are printable G0 characters, so an incorrect skip count
      * would either leak an operand into the output or consume part of "test" --
      * "test" survives intact only when exactly the right number of operand
-     * bytes is skipped (Req 4.4). The window geometry in the emitted cue also
+     * bytes is skipped (). The window geometry in the emitted cue also
      * confirms the window state was not altered by the reserved code.
      * @param {number} reservedCode The synthetic extended control-code value
      *   (e.g. 0x1008 for a C2 0x08, 0x1080 for a C3 0x80).
@@ -1496,12 +1489,11 @@ describe('Cea708Service', () => {
   });
 
   describe('window-command bitmap selection and current-window safety', () => {
-    // Req 5.1: a window command (clear/display/hide/toggle/delete) carrying an
+    // a window command (clear/display/hide/toggle/delete) carrying an
     // 8-bit window bitmap affects exactly the set of EXISTING windows whose bit
     // is set, and no others. Windows whose bit is set but that were never
     // defined are silently ignored (getSpecifiedWindowIds_ filters them out).
-    //
-    // Req 5.5: a command that targets a non-existent window, or a pen/character
+    // a command that targets a non-existent window, or a pen/character
     // command issued with no current window, is ignored and emits no cue.
 
     // Text codes that spell 'test'.
@@ -1732,16 +1724,8 @@ describe('Cea708Service', () => {
       }
     });
 
-    // Property 8: Window-id bitmap selection (design.md). For a random 8-bit
-    // window bitmap and a random set of defined windows, a window command
-    // affects exactly the set of EXISTING windows whose bit is set, and no
-    // others. This is realized as a seeded-random Jasmine test (the project
-    // enforces zero new runtime deps, so no fast-check). A deterministic inline
-    // mulberry32 PRNG, seeded from a spread of fixed seeds, generates the
-    // (defined-window set, bitmap) pairs. The delete command (0x8c) is the
-    // representative command, since its effect on each window (the window
-    // becomes null) is directly observable per window id.
-    // **Validates: Requirements 5.1**
+    // A window command affects exactly the existing windows whose bitmap bit
+    // is set. delete (0x8c) is used as the representative command.
 
     /**
      * A small, deterministic PRNG (mulberry32). Given the same seed it always

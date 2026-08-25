@@ -235,7 +235,6 @@ describe('Cea608Memory', () => {
     // [2]: test
     // [3]:
     // [4]: test
-    // ...
     // So we expect that test\n\ntest is emitted
     const topLevelCue = new shaka.text.Cue(startTime, endTime, '');
     // Anchored to the first non-empty row (row 2), not the cursor row (6).
@@ -300,7 +299,6 @@ describe('Cea608Memory', () => {
   });
 
   describe('tab-offset and indent positioning', () => {
-    // Validates: Requirements 3.3, 3.6.
     // A tab offset shifts the horizontal start position independent of the PAC
     // indent, and the position derives from whichever of indent/offset is set.
     const startTime = 1;
@@ -543,20 +541,10 @@ describe('Cea608Memory', () => {
   });
 
   describe('eraseToEndOfRow (DER locality)', () => {
-    // Property 6 (DER locality), Validates: Requirements 3.1.
-    //
-    // For all randomized buffer states and active-row positions, after a
-    // Delete-to-End-of-Row the active row is cleared while every other row is
-    // left unchanged and the cursor (active row index) is unchanged.
-    //
-    // `Cea608Memory` is an append-only row buffer with no independent
-    // within-row column cursor (characters are pushed onto the active row as
-    // they are decoded). The DER cursor therefore sits at the start of the
-    // active row, so the decoder-visible locality property is: the active row
-    // is emptied and all other rows survive intact.
+    // After DER, the active row is cleared; other rows and the cursor row are
+    // unchanged.
 
-    // Deterministic inline PRNG (mulberry32). Pure function of its state, so a
-    // given seed always reproduces the same sequence; failures are debuggable.
+    // Deterministic inline PRNG (mulberry32).
     const mulberry32 = (seed) => {
       let a = seed >>> 0;
       return () => {

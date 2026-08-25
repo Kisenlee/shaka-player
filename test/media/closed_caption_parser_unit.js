@@ -207,7 +207,7 @@ describe('ClosedCaptionParser', () => {
 
   describe('integration', () => {
     /**
-     * Asserts the cue-timing invariant from Requirement 6.1: every emitted cue
+     * Asserts the cue-timing invariant from every emitted cue
      * satisfies startTime < endTime, and (per stream) consecutive cues never
      * overlap. This is the end-to-end guard for captions produced by the full
      * parse -> extract -> decode pipeline.
@@ -229,7 +229,6 @@ describe('ClosedCaptionParser', () => {
       }
     }
 
-    // Requirements 2.1, 6.1: CEA-608 captions carried as SEI user-data in an
     // MP4 H.264 elementary stream must decode end-to-end and surface their
     // captioning streams via getStreams().
     it('decodes CEA-608 SEI captions from an MP4 H.264 stream', () => {
@@ -245,7 +244,6 @@ describe('ClosedCaptionParser', () => {
       expect(streams).toContain('CC3');
     });
 
-    // Requirements 2.1, 6.1: a dedicated CEA-608 caption track delivers raw
     // `c608` byte pairs (the RAW608 packet format) rather than SEI. Exercise
     // the extractRaw608 path through the parser end-to-end.
     it('decodes CEA-608 captions from a raw c608 MP4 track', () => {
@@ -259,7 +257,6 @@ describe('ClosedCaptionParser', () => {
       expect(parser.getStreams()).toContain('CC1');
     });
 
-    // Requirements 4.1, 5.1, 6.1: an MPEG-TS stream carries both CEA-608 and
     // CEA-708 captions inside video SEI. The TS parser needs no init segment.
     // This drives the CEA-708 service/window decode path (Delay alignment and
     // window selection) end-to-end alongside CEA-608.
@@ -275,7 +272,6 @@ describe('ClosedCaptionParser', () => {
       expect(streams).toContain('svc1');
     });
 
-    // Requirements 2.1, 6.1: the parser caches one decoder per continuity
     // timeline. Each decoder keeps its own discovered-stream state, and the
     // cached decoder is restored (not recreated) when we return to a previously
     // seen timeline across a discontinuity.
